@@ -1,0 +1,89 @@
+services:
+
+  nginx:
+    build:
+      context: ./requirements/nginx
+    image: nginx
+    container_name: nginx
+    env_file:
+      - .env
+    ports:
+      - "443:443"
+    networks:
+      - inception
+    volumes:
+      - wordpress_data:/var/www/html
+    depends_on:
+      wordpress:
+        condition: service_healthy
+    restart: always
+
+  wordpress:
+    build:
+      context: ./requirements/wordpress
+    image: wordpress
+    container_name: wordpress
+    env_file:
+      - .env
+    secrets:
+      - db_password
+      - credentials
+    expose:
+      - "9000"
+    networks:
+      - inception
+    volumes:
+      - wordpress_data:/var/www/html
+    depends_on:
+      mariadb:
+        condition: service_healthy
+    restart: always
+
+  mariadb:
+    build:
+      context: ./requirements/mariadb
+    image: mariadb
+    container_name: mariadb
+    env_file:
+      - .env
+    secrets:
+      - db_password
+      - db_root_password
+    expose:
+      - "3306"
+    networks:
+      - inception
+    volumes:
+      - db_data:/var/lib/mysql
+    restart: always
+
+networks:
+  inception:
+    driver: bridge
+
+volumes:
+  wordpress_data:
+    name: wordpress_data
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /home/saalomar/data/wordpress
+
+  db_data:
+    name: db_data
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /home/saalomar/data/mariadb
+
+secrets:
+  db_password:
+    file: ../secrets/db_password.txt
+
+  db_root_password:
+    file: ../secrets/db_root_password.txt
+
+  credentials:
+    file: ../secrets/credentials.txt
